@@ -43,25 +43,28 @@ export default function App() {
   const [isScheduleMeetingOpen, setIsScheduleMeetingOpen] = useState(false);
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
 
-  // Products state (can be edited/managed by Admin)
-  const [products, setProducts] = useState<Product[]>(() => {
-    try {
-      const stored = localStorage.getItem('rss_products_data');
-      return stored ? JSON.parse(stored) : INITIAL_PRODUCTS;
-    } catch {
-      return INITIAL_PRODUCTS;
-    }
-  });
+  // Products state
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
 
-  // Master CMS Configuration (controls entire site)
-  const [cmsConfig, setCmsConfig] = useState<CmsConfig>(() => {
-    try {
-      const stored = localStorage.getItem('rss_cms_config');
-      return stored ? JSON.parse(stored) : INITIAL_CMS_CONFIG;
-    } catch {
-      return INITIAL_CMS_CONFIG;
-    }
-  });
+  // Master CMS Configuration
+  const [cmsConfig, setCmsConfig] = useState<CmsConfig>(INITIAL_CMS_CONFIG);
+
+  // Fetch central database from server on load
+  useEffect(() => {
+    fetch('/api/cms')
+      .then(res => res.json())
+      .then(data => {
+        if (Object.keys(data).length > 0) setCmsConfig(data);
+      })
+      .catch(err => console.error("Error loading CMS:", err));
+
+    fetch('/api/products')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.length > 0) setProducts(data);
+      })
+      .catch(err => console.error("Error loading Products:", err));
+  }, []);
 
   // Website Settings (legacy adapter mapped from cmsConfig)
   const settings = {
@@ -107,30 +110,38 @@ export default function App() {
     checkViewFromUrl();
     window.addEventListener('popstate', checkViewFromUrl);
     window.addEventListener('hashchange', checkViewFromUrl);
+
     return () => {
       window.removeEventListener('popstate', checkViewFromUrl);
       window.removeEventListener('hashchange', checkViewFromUrl);
     };
   }, []);
 
-  // Save products when modified in admin
- const handleUpdateProducts = (updated: Product[]) => {
-  setProducts(updated);
-  try {
-    // Save the array containing the real server URLs
-    localStorage.setItem('rss_products_data', JSON.stringify(updated));
-  } catch (err) {
-    console.error('Failed to save products:', err);
-  }
-};
+  // Save products to backend
+  const handleUpdateProducts = async (updated: Product[]) => {
+    setProducts(updated);
+    try {
+      await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      });
+    } catch (err) {
+      console.error('Failed to save products to server:', err);
+    }
+  };
 
-  // Save master CMS configuration
-  const handleUpdateCmsConfig = (updated: CmsConfig) => {
+  // Save master CMS configuration to backend
+  const handleUpdateCmsConfig = async (updated: CmsConfig) => {
     setCmsConfig(updated);
     try {
-      localStorage.setItem('rss_cms_config', JSON.stringify(updated));
+      await fetch('/api/cms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      });
     } catch (err) {
-      console.warn('LocalStorage quota reached when saving CMS config:', err);
+      console.error('Failed to save CMS config to server:', err);
     }
   };
 
@@ -267,33 +278,28 @@ export default function App() {
         initialProduct={quoteInitialProduct}
         whatsAppNumber={settings.whatsAppNumber}
       />
-
       <CatalogueModal
         isOpen={isCatalogueOpen}
         onClose={() => setIsCatalogueOpen(false)}
         onOpenQuote={(item) => handleOpenQuoteWithProduct(item)}
         initialPage={catalogueInitialPage}
       />
-
       <TvBackdropModal
         isOpen={isTvOpen}
         onClose={() => setIsTvOpen(false)}
         targetUrl={window.location.href}
       />
-
       <QrCodeModal
         isOpen={isQrOpen}
         onClose={() => setIsQrOpen(false)}
         initialUrl={window.location.href}
       />
-
       <ProductDetailModal
         product={detailProduct}
         onClose={() => setDetailProduct(null)}
         onRequestQuote={(prod) => handleOpenQuoteWithProduct(prod)}
         whatsAppNumber={settings.whatsAppNumber}
       />
-
       <MeetingScheduleModal
         isOpen={isScheduleMeetingOpen}
         onClose={() => setIsScheduleMeetingOpen(false)}
