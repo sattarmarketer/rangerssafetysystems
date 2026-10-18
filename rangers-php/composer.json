@@ -1,0 +1,19 @@
+{
+  "name": "rangers/safety-systems",
+  "description": "Rangers Safety Systems LLC — B2B Exhibition & Product Showcase Website",
+  "type": "project",
+  "license": "proprietary",
+  "require": {
+    "php": "^8.2 || ^8.3",
+    "ext-pdo": "*",
+    "ext-json": "*",
+    "ext-mbstring": "*",
+    "chillerlan/php-qrcode": "^5.0",
+    "vlucas/phpdotenv": "^5.6"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "app/"
+    }
+  }
+}
